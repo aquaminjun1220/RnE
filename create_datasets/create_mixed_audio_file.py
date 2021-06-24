@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # use like
-# python create_mixed_audio_file.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --noise_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND --output_mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/output_mixed_data --snrs -10 0 10
+# python create_mixed_audio_file.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --noise_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND --output_mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_data --snrs -10 0 10
 
 import argparse
 import array
