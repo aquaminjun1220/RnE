@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # use like
-# python create_mixed_audio_file.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN/DR1/FCJF0 --noise_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND/DKITCHEN --output_mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/output_mixed_data --snrs -10 0 10
+# python create_mixed_audio_file.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --noise_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND --output_mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/output_mixed_data --snrs -10 0 10
 
 import argparse
 import array
@@ -46,8 +46,8 @@ if __name__ == '__main__':
     clean_files = args.clean_files
     noise_files = args.noise_files
 
-    clean_files = os.listdir(clean_files)
-    noise_files = os.listdir(noise_files)
+    clean_files = os.listdir(clean_files)[:500]
+    noise_files = os.listdir(noise_files)[:10]
 
     for noise_file in noise_files:
         if not noise_file.endswith(".wav"):
