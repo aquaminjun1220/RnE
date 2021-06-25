@@ -23,7 +23,7 @@ if __name__=='__main__':
 
     args = get_args()
 
-    for mixed_file in os.listdir(args.mixed_files)[14900:]:
+    for mixed_file in os.listdir(args.mixed_files):
         clean_file = mixed_file.split('+')[0]
 
         clean_data = librosa.load(args.clean_files + '/' + clean_file, sr=16000, dtype="float64")[0]
