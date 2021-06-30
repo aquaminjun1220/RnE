@@ -7,48 +7,33 @@ import numpy as np
 import librosa
 
 class Dataset():
-    def __init__(self, mixed_data, ground_truth_mask, Flatten=True):
-        self.mixed_data = mixed_data
-        self.ground_truth_mask = ground_truth_mask
-        self.Flatten = Flatten
-        self.create_dataset()
+    def __init__(self, mixed_stfts, ground_truth_masks, shuffle=False, batch_size=1):
+        self.mixed_stfts = mixed_stfts
+        self.ground_truth_masks = ground_truth_masks
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.dataset = tf.data.Dataset.from_generator(self._gen, output_signature=(tf.TensorSpec(shape=(None, 129), dtype=np.float32), tf.TensorSpec(shape=(None, 129), dtype=np.float32)))
+        if self.shuffle:
+            self.dataset = self.dataset.shuffle(20000)
+        self.dataset = self.dataset.batch(batch_size)
 
-    def data_generator(self):
-        mixed_data = self.mixed_data
-        ground_truth_mask = self.ground_truth_mask
+    def _gen(self):
+        mixed_stfts = self.mixed_stfts
+        ground_truth_masks = self.ground_truth_masks
 
-        masks = os.listdir(ground_truth_mask)
+        stfts = os.listdir(mixed_stfts)
+        masks = os.listdir(ground_truth_masks)
         i = 0
         while True:
-            if i >= len(masks):
+            if i >= len(stfts):
                 break
+            stft = stfts[i]
+            mask = masks[i]
             
-            mask_imag = masks[i]
-            mask_real = masks[i+1]
-                
-            mask_imag_DF = pd.read_csv(ground_truth_mask + '/'+ mask_imag, header=None)
-            mask_imag_np = np.array(mask_imag_DF)
-            mask_real_DF = pd.read_csv(ground_truth_mask + '/'+ mask_real, header=None)
-            mask_real_np = np.array(mask_real_DF)
-
-
-            mixed = mixed_data + '/' + mask_imag[:-21]
-            mixed_np = librosa.load(mixed, sr=16000, dtype="float64")[0]
-            mixed_stft = librosa.stft(mixed_np, n_fft=128, hop_length=64, win_length=128)
-            mixed_real = np.real(mixed_stft)
-            mixed_imag = np.imag(mixed_stft)
-            if self.Flatten:
-                yield (np.array([mixed_real, mixed_imag]).flatten(), np.array([mask_real_np, mask_imag_np]).flatten())
-                i+=1
-            else:
-                yield (np.array([mixed_real, mixed_imag]), np.array([mask_real_np, mask_imag_np]))
-                i+=1
-
-    def create_dataset(self):
-        dataset = tf.data.Dataset.from_generator(self.data_generator, output_types=(tf.float64, tf.float64), output_shapes=((98670,), (98670,)))
-        dataset = dataset.cache('C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/cache')
-        dataset = dataset.prefetch(2)
-        self.dataset = dataset
+            stft = pd.read_csv(mixed_stfts+'/'+stft, header=None)
+            mask = pd.read_csv(ground_truth_masks+'/'+mask, header=None)
+            
+            yield (np.transpose(stft), np.transpose(mask))
 
 class DNN(keras.models.Model):
     def __init__(self, in_shape, out_shape):
@@ -74,37 +59,55 @@ class DNN(keras.models.Model):
     def compile_model(self):
         self.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
+# input shape will be (batch_size, 129, time_length)
+class RNN(keras.models.Model):
+    def __init__(self):
+        super().__init__()
+        self._build_model()
+        super().__init__(self._x,self._y)
+        self.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+
+    def _build_model(self):
+        x = layers.Input(shape=(None, 129))
+        y = layers.LSTM(129, return_sequences=True)(x)
+        self._x = x
+        self._y = y
+
 class Machine():
-    def __init__(self, mixed_data, ground_truth_mask):
-        self.mixed_data = mixed_data
-        self.ground_truth_mask = ground_truth_mask
+    def __init__(self, mixed_stfts, ground_truth_masks, batch_size=128, shuffle=False):
+        self.mixed_stfts = mixed_stfts
+        self.ground_truth_masks = ground_truth_masks
+        self.batch_size = batch_size
+        self.shuffle = shuffle
         self.set_data()
         self.set_model()
     
     def set_data(self):
-        mixed_data = self.mixed_data
-        ground_truth_mask = self.ground_truth_mask
+        mixed_stfts = self.mixed_stfts
+        ground_truth_masks = self.ground_truth_masks
+        batch_size = self.batch_size
+        shuffle = self.shuffle
 
-        self.data = Dataset(mixed_data, ground_truth_mask)
-        for mixed_data, ground_truth_mask in self.data.dataset:
-            self.in_shape = mixed_data.shape
-            self.out_shape = ground_truth_mask.shape
+        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle)
+
+        for i, j in self.data.dataset:
+            print(i.shape)
+            print(j.shape)
             break
-    
+
     def set_model(self):
-        in_shape = self.in_shape
-        out_shape = self.out_shape
-        self.model = DNN(in_shape, out_shape)
+        self.model = RNN()
     
-    def fit(self, epochs=10, batch_size=128, verbose=1):
+    def fit(self, epochs=10, verbose=1):
         data = self.data
         model = self.model
 
-        history = model.fit(data.dataset, epochs=epochs, batch_size=batch_size, verbose=verbose)
+        history = model.fit(data.dataset, epochs=epochs, verbose=verbose)
         return history
 
-    def run(self, epochs=10, batch_size=128, verbose=1):
-        self.fit(epochs=epochs, batch_size=batch_size, verbose=verbose)
+    def run(self, epochs=10, verbose=1):
+        self.fit(epochs=epochs, verbose=verbose)
 
-machine = Machine('C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_data', 'C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/ground_truth_mask')
-machine.run()
+
+mach = Machine('C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_stft', 'C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/ground_truth_mask', batch_size=128, shuffle=False)
+mach.run(epochs=10, verbose=1)

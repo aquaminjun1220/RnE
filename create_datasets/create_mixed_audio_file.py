@@ -46,8 +46,8 @@ if __name__ == '__main__':
     clean_files = args.clean_files
     noise_files = args.noise_files
 
-    clean_files = os.listdir(clean_files)[:500]
-    noise_files = os.listdir(noise_files)[:10]
+    clean_files = os.listdir(clean_files)
+    noise_files = os.listdir(noise_files)
 
     for noise_file in noise_files:
         if not noise_file.endswith(".wav"):
