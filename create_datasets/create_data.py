@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # use like
-# python create_ground_truth_mask.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_data --output_ground_truth_masks C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/ground_truth_mask --output_mixed_stfts C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_stft
+# python create_data.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_data --output_ground_truth_masks D:/RnE/data/ground_truth_mask --output_mixed_stfts D:/RnE/data/mixed_stft
 
 import librosa
 import numpy as np
@@ -24,7 +24,7 @@ if __name__=='__main__':
 
     args = get_args()
 
-    for mixed_file in os.listdir(args.mixed_files):
+    for mixed_file in os.listdir(args.mixed_files)[7500:]:
         clean_file = mixed_file.split('+')[0]
 
         clean_data = librosa.load(args.clean_files + '/' + clean_file, sr=16000, dtype="float64")[0]
@@ -38,12 +38,12 @@ if __name__=='__main__':
 
         mixed_stft_mag = DataFrame(mixed_stft_mag)
 
-        mixed_stft_mag.to_csv(args.output_mixed_stft + '/' + mixed_file + '-' + 'stft.csv', header=False, index=False)
+        mixed_stft_mag.to_csv(args.output_mixed_stfts + '/' + mixed_file + '-' + 'stft.csv', header=False, index=False)
 
-        cIRM = clean_stft / mixed_stft
+        #cIRM = clean_stft / mixed_stft
 
-        cIRM_mag = np.abs(cIRM)
+        #cIRM_mag = np.abs(cIRM)
 
-        cIRM_mag = DataFrame(cIRM_mag)
+        #cIRM_mag = DataFrame(cIRM_mag)
 
-        cIRM_mag.to_csv(args.output_ground_truth_mask + '/' + mixed_file + '-' + 'ground_mask_mag.csv', header=False, index=False)
+        #cIRM_mag.to_csv(args.output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv', header=False, index=False)
