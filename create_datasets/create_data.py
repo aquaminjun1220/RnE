@@ -19,12 +19,31 @@ def get_args():
     args = parser.parse_args()
     return args
 
+def create_data(clean_files, mixed_files, output_ground_truth_masks, output_mixed_stfts):
+    for mixed_file in os.listdir(mixed_files):
+        clean_file = mixed_file.split('+')[0]
+
+        clean_data = librosa.load(clean_files + '/' + clean_file, sr=16000, dtype="float64")[0]
+        mixed_data = librosa.load(mixed_files + '/' + mixed_file, sr=16000, dtype="float64")[0]
+
+
+        clean_stft = librosa.stft(clean_data, n_fft=256, hop_length=128, win_length=256)
+        mixed_stft = librosa.stft(mixed_data, n_fft=256, hop_length=128, win_length=256)
+        
+        mixed_stft_mag = np.abs(mixed_stft)
+        mixed_stft_mag = DataFrame(mixed_stft_mag)
+        mixed_stft_mag.to_csv(output_mixed_stfts + '/' + mixed_file + '-' + 'stft.csv', header=False, index=False)
+
+        cIRM = clean_stft / mixed_stft
+        cIRM_mag = np.abs(cIRM)
+        cIRM_mag = DataFrame(cIRM_mag)
+        cIRM_mag.to_csv(output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv', header=False, index=False)
 
 if __name__=='__main__':
 
     args = get_args()
 
-    for mixed_file in os.listdir(args.mixed_files)[7500:]:
+    for mixed_file in os.listdir(args.mixed_files):
         clean_file = mixed_file.split('+')[0]
 
         clean_data = librosa.load(args.clean_files + '/' + clean_file, sr=16000, dtype="float64")[0]
@@ -35,15 +54,10 @@ if __name__=='__main__':
         mixed_stft = librosa.stft(mixed_data, n_fft=256, hop_length=128, win_length=256)
         
         mixed_stft_mag = np.abs(mixed_stft)
-
         mixed_stft_mag = DataFrame(mixed_stft_mag)
-
         mixed_stft_mag.to_csv(args.output_mixed_stfts + '/' + mixed_file + '-' + 'stft.csv', header=False, index=False)
 
-        #cIRM = clean_stft / mixed_stft
-
-        #cIRM_mag = np.abs(cIRM)
-
-        #cIRM_mag = DataFrame(cIRM_mag)
-
-        #cIRM_mag.to_csv(args.output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv', header=False, index=False)
+        cIRM = clean_stft / mixed_stft
+        cIRM_mag = np.abs(cIRM)
+        cIRM_mag = DataFrame(cIRM_mag)
+        cIRM_mag.to_csv(args.output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv', header=False, index=False)

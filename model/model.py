@@ -5,38 +5,54 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+# from create_datasets.create_data import create_data
 
 class Dataset():
-    def __init__(self, mixed_stfts, ground_truth_masks, shuffle=False, batch_size=1):
+    def __init__(self, mixed_stfts, ground_truth_masks, shuffle=False, batch_size=1, init=False, flat=True, clean_files=None, mixed_files=None):
         self.mixed_stfts = mixed_stfts
         self.ground_truth_masks = ground_truth_masks
-        self.batch_size = batch_size
-        self.shuffle = shuffle
+        self.flat = flat
+        #if init:
+            #create_data(clean_files=clean_files, mixed_files=mixed_files, output_ground_truth_masks=ground_truth_masks, output_mixed_stfts=mixed_stfts)
         self.dataset = tf.data.Dataset.from_generator(self._gen, output_signature=(tf.TensorSpec(shape=(None, 129), dtype=np.float32), tf.TensorSpec(shape=(None, 129), dtype=np.float32)))
-        self.dataset = self.dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-        if self.shuffle:
+        self.dataset = self.dataset.padded_batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
+        if shuffle:
             self.dataset = self.dataset.shuffle(20000, reshuffle_each_iteration=True)
         
-
     def _gen(self):
         mixed_stfts = self.mixed_stfts
         ground_truth_masks = self.ground_truth_masks
-
+        flat = self.flat
         stfts = os.listdir(mixed_stfts)
         masks = os.listdir(ground_truth_masks)
-        i = 0
-        while True:
-            if i >= len(stfts):
-                break
-            stft = stfts[i]
-            mask = masks[i]
-            
-            stft = pd.read_csv(mixed_stfts+'/'+stft, header=None)
-            mask = pd.read_csv(ground_truth_masks+'/'+mask, header=None)
-            
-            yield (np.transpose(stft), np.transpose(mask))
+        if flat:
+            i = 0
+            while i<len(stfts):
+                stft = stfts[i]
+                mask = masks[i]
+                
+                stft = pd.read_csv(mixed_stfts+'/'+stft, header=None)
+                mask = pd.read_csv(ground_truth_masks+'/'+mask, header=None)
+                
+                yield (np.transpose(stft), np.transpose(mask))
 
-# input shape will be (batch_size, 129, time_length)
+                i+=1
+        else:
+            i = 0
+            while i<len(stfts):
+                stft = stfts[i]
+                mask = masks[i]
+                
+                stft = pd.read_csv(mixed_stfts+'/'+stft, header=None)
+                mask = pd.read_csv(ground_truth_masks+'/'+mask, header=None)
+
+                mask_tanh = np.tanh(0.1*mask)
+                
+                yield (np.transpose(stft), np.transpose(mask_tanh))
+
+                i+=1
+
+# input shape will be (batch_size, time_length, 129)
 class RNN(keras.models.Model):
     def __init__(self):
         super().__init__()
@@ -54,12 +70,12 @@ class RNN(keras.models.Model):
         self._y = y
 
 class Machine():
-    def __init__(self, mixed_stfts, ground_truth_masks, batch_size=128, shuffle=False):
-        self.set_data(mixed_stfts, ground_truth_masks, batch_size, shuffle)
+    def __init__(self, mixed_stfts, ground_truth_masks, batch_size=128, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None):
+        self.set_data(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, clean_files=clean_files, mixed_files=mixed_files)
         self.set_model()
     
-    def set_data(self, mixed_stfts, ground_truth_masks, batch_size, shuffle):
-        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle)
+    def set_data(self, mixed_stfts, ground_truth_masks, batch_size, shuffle, init, clean_files, mixed_files):
+        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, clean_files=clean_files, mixed_files=mixed_files)
 
     def set_model(self):
         self.model = RNN()
@@ -68,10 +84,10 @@ class Machine():
         data = self.data
         model = self.model
         if save:
-            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{epoch:02d}.cpkt', monitor='loss', verbose=1, save_weights_only=True, save_best_only=True)
-            history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=[cp_callback], steps_per_epoch=117)
+            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{epoch:02d}.cpkt', monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
+            history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=[cp_callback])
         else:
-            history = model.fit(data.dataset, epochs=epochs, verbose=verbose, steps_per_epoch=117)
+            history = model.fit(data.dataset, epochs=epochs, verbose=verbose)
         return history
     
     def plot(self, history):
@@ -91,6 +107,6 @@ class Machine():
         history = self.fit(epochs=epochs, verbose=verbose, save=save)
         if plot:
             self.plot(history)
-
-mach = Machine('D:/RnE/data/mixed_stft', 'D:/RnE/data/ground_truth_mask', batch_size=128, shuffle=False)
-mach.run(epochs=100, verbose=1, save=True, plot=True)
+if __name__=='__main__':
+    mach = Machine('D:/RnE/data/mixed_stft', 'D:/RnE/data/ground_truth_mask', batch_size=128, shuffle=False, init=False, flat=False)
+    mach.run(epochs=100, verbose=1, save=True, plot=True)
