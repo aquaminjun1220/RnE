@@ -71,20 +71,24 @@ class RNN(keras.models.Model):
 
 class Machine():
     def __init__(self, mixed_stfts, ground_truth_masks, batch_size=128, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None):
-        self.set_data(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, clean_files=clean_files, mixed_files=mixed_files)
+        self.set_data(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
         self.set_model()
     
-    def set_data(self, mixed_stfts, ground_truth_masks, batch_size, shuffle, init, clean_files, mixed_files):
-        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, clean_files=clean_files, mixed_files=mixed_files)
+    def set_data(self, mixed_stfts, ground_truth_masks, batch_size, shuffle, init, flat, clean_files, mixed_files):
+        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
 
     def set_model(self):
         self.model = RNN()
+
+    def load_model(self, checkpoint):
+        self.model.load_weights(checkpoint)
+        print("### Successfully loaded weights from {checkpoint} ###".format(checkpoint=checkpoint))
     
-    def fit(self, epochs=10, verbose=1, save=True):
+    def fit(self, epochs=10, verbose=1, save=True, exp=0):
         data = self.data
         model = self.model
         if save:
-            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{epoch:02d}.cpkt', monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
+            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{exp:03d}+{{epoch:02d}}.cpkt'.format(exp=exp), monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
             history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=[cp_callback])
         else:
             history = model.fit(data.dataset, epochs=epochs, verbose=verbose)
@@ -103,10 +107,18 @@ class Machine():
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
 
-    def run(self, epochs=10, verbose=1, save=True, plot=True):
-        history = self.fit(epochs=epochs, verbose=verbose, save=save)
+    def run(self, epochs=10, verbose=1, save=True, plot=True, from_ckpt=True):
+        exp=0
+        if from_ckpt:
+            latest = tf.train.latest_checkpoint('ckpt')
+            try:
+                exp = int(latest[8:11]) + int(latest[12:14])
+            except:
+                exp = int(latest[8:11])
+            self.load_model(latest)
+        history = self.fit(epochs=epochs, verbose=verbose, save=save, exp=exp)
         if plot:
             self.plot(history)
 if __name__=='__main__':
     mach = Machine('D:/RnE/data/mixed_stft', 'D:/RnE/data/ground_truth_mask', batch_size=128, shuffle=False, init=False, flat=False)
-    mach.run(epochs=100, verbose=1, save=True, plot=True)
+    mach.run(epochs=50, verbose=1, save=True, plot=True, from_ckpt=True)
