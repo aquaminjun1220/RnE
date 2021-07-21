@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # use like
-# python create_mixed_audio_file.py --clean_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --noise_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND --output_mixed_files C:/Users/aquamj/Documents/GitHub/RnE/create_datasets/data/mixed_data --snrs -10 0 10
+# python create_mixed_audio_file.py --clean_files C:/Users/aquam/Documents/GitHub/RnE/create_datasets/data/clean_data/TIMIT/TRAIN --noise_files C:/Users/aquam/Documents/GitHub/RnE/create_datasets/data/noise_data/DEMAND --output_mixed_files D:/RnE/data/mixed_data/TRAIN --snrs -10 0 10
 
 import argparse
 import array
@@ -45,6 +45,7 @@ if __name__ == '__main__':
 
     clean_files = args.clean_files
     noise_files = args.noise_files
+    snrs = args.snrs
 
     clean_files = os.listdir(clean_files)
     noise_files = os.listdir(noise_files)
@@ -66,8 +67,7 @@ if __name__ == '__main__':
             start = random.randint(0, len(noise_amp)-len(clean_amp))
             divided_noise_amp = noise_amp[start: start + len(clean_amp)]
             noise_rms = cal_rms(divided_noise_amp)
-
-            snrs = [-10, 0, 10]
+            
             for snr in snrs:
                 adjusted_noise_rms = cal_adjusted_rms(clean_rms, snr)
                 

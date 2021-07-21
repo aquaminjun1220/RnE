@@ -5,6 +5,9 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import librosa
+import wave
+import array
 # from create_datasets.create_data import create_data
 
 class Dataset():
@@ -107,6 +110,27 @@ class Machine():
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
 
+    def estimate(self, input_path, output_path):
+        input_data = librosa.load(input_path, sr=16000, dtype='float64')[0]
+        input_stft = librosa.stft(input_data, n_fft=256, hop_length=128, win_length=256)
+        
+        input_stft_mag = np.abs(input_stft) # (129, timestep)
+        input_stft_phase = np.angle(input_stft)
+
+        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(input_stft_mag), 0), training=None), axis=0)) # (129, timestep)
+        cIRM_mag = 10 * np.arctanh(cIRM_mag_tanh)
+        est_stft_mag = cIRM_mag * input_stft_mag
+        est_stft_phase = input_stft_phase
+        est_stft = est_stft_mag * np.exp(1j*est_stft_phase)
+        
+        est_data = librosa.istft(est_stft, hop_length=128, win_length=256)
+        est_data = est_data*2**15 # for transition between librosa and wave
+
+        output_file = wave.Wave_write(output_path)
+        output_file.setparams(wave.open(input_path, "r").getparams()) #nchannels, sampwidth, framerate, nframes, comptype, compname
+        output_file.writeframes(array.array('h', est_data.astype(np.int16)).tobytes())
+        output_file.close()
+
     def run(self, epochs=10, verbose=1, save=True, plot=True, from_ckpt=True):
         exp=0
         if from_ckpt:
@@ -121,4 +145,5 @@ class Machine():
             self.plot(history)
 if __name__=='__main__':
     mach = Machine('D:/RnE/data/mixed_stft', 'D:/RnE/data/ground_truth_mask', batch_size=128, shuffle=False, init=False, flat=False)
-    mach.run(epochs=50, verbose=1, save=True, plot=True, from_ckpt=True)
+    mach.load_model(tf.train.latest_checkpoint('ckpt'))
+    mach.estimate('D:/RnE/data/mixed_data/TEST/SA1.WAV.wav+DKITCHEN_ch01.wav--snr-10.wav', 'D:/RnE/data/mixed/TEST/SA1.WAV.wav+DKITCHEN_ch01.wav--snr-10.wav')
