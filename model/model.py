@@ -3,6 +3,7 @@ import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
 import os
 import pandas as pd
+from pandas import DataFrame
 import numpy as np
 import matplotlib.pyplot as plt
 import librosa
@@ -18,10 +19,10 @@ class Dataset():
         #if init:
             #create_data(clean_files=clean_files, mixed_files=mixed_files, output_ground_truth_masks=ground_truth_masks, output_mixed_stfts=mixed_stfts)
         self.dataset = tf.data.Dataset.from_generator(self._gen, output_signature=(tf.TensorSpec(shape=(None, 129), dtype=np.float32), tf.TensorSpec(shape=(None, 129), dtype=np.float32)))
-        self.dataset = self.dataset.padded_batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
         if shuffle:
             self.dataset = self.dataset.shuffle(20000, reshuffle_each_iteration=True)
-        
+        self.dataset = self.dataset.padded_batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
+
     def _gen(self):
         mixed_stfts = self.mixed_stfts
         ground_truth_masks = self.ground_truth_masks
@@ -61,7 +62,7 @@ class RNN(keras.models.Model):
         super().__init__()
         self._build_model()
         super().__init__(self._x,self._y)
-        self.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+        self.compile(loss='mse', optimizer='adam')
 
     def _build_model(self):
         x = layers.Input(shape=(None, 129))
@@ -73,13 +74,15 @@ class RNN(keras.models.Model):
         self._y = y
 
 class Machine():
-    def __init__(self, mixed_stfts, ground_truth_masks, batch_size=128, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None):
-        self.set_data(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
+    def __init__(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size=128, val_batch_size=32, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None):
+        self.set_data(mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size=batch_size, val_batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files, val_clean_files=val_clean_files, val_mixed_files=val_mixed_files)
         self.set_model()
-    
-    def set_data(self, mixed_stfts, ground_truth_masks, batch_size, shuffle, init, flat, clean_files, mixed_files):
-        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
+        self.exp = 0
 
+    def set_data(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size, val_batch_size, shuffle, init, flat, clean_files, mixed_files, val_clean_files, val_mixed_files):
+        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
+        self.val_data = Dataset(val_mixed_stfts, val_ground_truth_masks, batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=val_clean_files, mixed_files=val_mixed_files)
+    
     def set_model(self):
         self.model = RNN()
 
@@ -87,14 +90,38 @@ class Machine():
         self.model.load_weights(checkpoint)
         print("### Successfully loaded weights from {checkpoint} ###".format(checkpoint=checkpoint))
     
-    def fit(self, epochs=10, verbose=1, save=True, exp=0):
+    def load_latest(self):
+        exp = 0
+        latest = tf.train.latest_checkpoint('ckpt')
+        try:
+            exp = int(latest[8:11]) + int(latest[12:14])
+        except:
+            exp = int(latest[8:11])
+        self.load_model(latest)
+        self.exp = exp
+
+    class historyLogger(tf.keras.callbacks.Callback):
+        def __init__(self, filepath):
+            super().__init__()
+            self.filepath = filepath
+
+        def on_epoch_end(self, epoch, logs):
+            df = DataFrame(logs, index=[0])
+            df.to_csv(self.filepath, header=False, index=False, mode='a')
+
+    def fit(self, epochs=10, verbose=1, save=True, hist_save=True):
         data = self.data
+        val_data = self.val_data
         model = self.model
+        exp = self.exp
+        callbacks=[]
         if save:
             cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{exp:03d}+{{epoch:02d}}.cpkt'.format(exp=exp), monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
-            history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=[cp_callback])
-        else:
-            history = model.fit(data.dataset, epochs=epochs, verbose=verbose)
+            callbacks.append(cp_callback)
+        if hist_save:
+            hist_callback = self.historyLogger("history.csv")
+            callbacks.append(hist_callback)
+        history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=callbacks, validation_data=val_data.dataset)
         return history
     
     def plot(self, history):
@@ -131,19 +158,17 @@ class Machine():
         output_file.writeframes(array.array('h', est_data.astype(np.int16)).tobytes())
         output_file.close()
 
-    def run(self, epochs=10, verbose=1, save=True, plot=True, from_ckpt=True):
-        exp=0
+    def run(self, epochs=10, verbose=1, save=True, hist_save=True, plot=True, from_ckpt=True):
         if from_ckpt:
-            latest = tf.train.latest_checkpoint('ckpt')
-            try:
-                exp = int(latest[8:11]) + int(latest[12:14])
-            except:
-                exp = int(latest[8:11])
-            self.load_model(latest)
-        history = self.fit(epochs=epochs, verbose=verbose, save=save, exp=exp)
+            self.load_latest()
+        history = self.fit(epochs=epochs, verbose=verbose, save=save, hist_save=hist_save)
         if plot:
             self.plot(history)
+
 if __name__=='__main__':
-    mach = Machine('D:/RnE/data/mixed_stft', 'D:/RnE/data/ground_truth_mask', batch_size=128, shuffle=False, init=False, flat=False)
-    mach.load_model(tf.train.latest_checkpoint('ckpt'))
-    mach.estimate('D:/RnE/data/mixed_data/TEST/SA1.WAV.wav+DKITCHEN_ch01.wav--snr-10.wav', 'D:/RnE/data/mixed/TEST/SA1.WAV.wav+DKITCHEN_ch01.wav--snr-10.wav')
+    mach = Machine(mixed_stfts='D:/RnE/data/mixed_stft/TRAIN', ground_truth_masks='D:/RnE/data/ground_truth_mask/TRAIN', val_mixed_stfts='D:/RnE/data/mixed_stft/TEST', val_ground_truth_masks='D:/RnE/data/ground_truth_mask/TEST', batch_size=128, val_batch_size=32, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None)
+    mach.load_latest()
+    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav')
+    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+NFIELD_ch05.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+NFIELD_ch05.wav--snr0.wav')
+    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav')
+    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+NPARK_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav')
