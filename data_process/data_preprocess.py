@@ -33,7 +33,7 @@ def save_as_csv(data, path):
     data.to_csv(path, header=False, index=False)
 
 def data_preprocess(clean_files, mixed_files, output_ground_truth_masks, output_mixed_stfts, num_data):
-    for mixed_file in os.listdir(mixed_files)[:num_data]:
+    for index, mixed_file in enumerate(os.listdir(mixed_files)[:num_data]):
         clean_file = mixed_file.split('+')[0]
 
         clean_stft = cal_stft(clean_files + '/' + clean_file)
@@ -43,6 +43,7 @@ def data_preprocess(clean_files, mixed_files, output_ground_truth_masks, output_
 
         cIRM = cal_cIRM(clean_stft, mixed_stft)
         save_as_csv(data=np.abs(cIRM), path=(output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv'))
+        print(index)
 
 if __name__=='__main__':
 

@@ -40,24 +40,18 @@ def save_waveform(output_path, params, amp):
     output_file.writeframes(array.array('h', amp.astype(np.int16)).tobytes() )
     output_file.close()
 
-if __name__ == '__main__':
-    args = get_args()
+def create_mixed_audio_file(clean_files, noise_files, output_mixed_files, snrs):
+    clean_file_list = os.listdir(clean_files)
+    noise_file_list = os.listdir(noise_files)
 
-    clean_files = args.clean_files
-    noise_files = args.noise_files
-    snrs = args.snrs
-
-    clean_files = os.listdir(clean_files)
-    noise_files = os.listdir(noise_files)
-
-    for noise_file in noise_files:
+    for noise_file in noise_file_list:
         if not noise_file.endswith(".wav"):
             continue
-        for clean_file in clean_files:
+        for clean_file in clean_file_list:
             if not clean_file.endswith(".wav"):
                 continue
-            clean_wav = wave.open(args.clean_files + '/' + clean_file, "r")
-            noise_wav = wave.open(args.noise_files + '/' + noise_file, "r")
+            clean_wav = wave.open(clean_files + '/' + clean_file, "r")
+            noise_wav = wave.open(noise_files + '/' + noise_file, "r")
 
             clean_amp = cal_amp(clean_wav)
             noise_amp = cal_amp(noise_wav)
@@ -86,5 +80,15 @@ if __name__ == '__main__':
                     clean_amp = clean_amp * (reduction_rate)
 
                 ## make a new name for output_mixed_file
-                output_mixed_file = args.output_mixed_files + '/' + clean_file + '+' + noise_file + '--snr' + str(snr) + '.wav'
+                output_mixed_file = output_mixed_files + '/' + clean_file + '+' + noise_file + '--snr' + str(snr) + '.wav'
                 save_waveform(output_mixed_file, clean_wav.getparams(), mixed_amp)
+
+if __name__ == '__main__':
+    args = get_args()
+
+    clean_files = args.clean_files
+    noise_files = args.noise_files
+    output_mixed_files = args.output_mixed_files
+    snrs = args.snrs
+
+    create_mixed_audio_file(clean_files, noise_files, output_mixed_files, snrs)

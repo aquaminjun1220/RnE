@@ -11,11 +11,14 @@ import wave
 import array
 # from create_datasets.create_data import create_data
 
+"""mixed_stft, ground_truth_mask, shuffle, batch_size, flat, clean_files, mixed_files, init
+"""
 class Dataset():
-    def __init__(self, mixed_stfts, ground_truth_masks, shuffle=False, batch_size=1, init=False, flat=True, clean_files=None, mixed_files=None):
+    def __init__(self, mixed_stfts, ground_truth_masks, num_data=15000, shuffle=False, batch_size=1, flat=True, clean_files=None, mixed_files=None, init=False):
         self.mixed_stfts = mixed_stfts
         self.ground_truth_masks = ground_truth_masks
         self.flat = flat
+        self.num_data = num_data
         #if init:
             #create_data(clean_files=clean_files, mixed_files=mixed_files, output_ground_truth_masks=ground_truth_masks, output_mixed_stfts=mixed_stfts)
         self.dataset = tf.data.Dataset.from_generator(self._gen, output_signature=(tf.TensorSpec(shape=(None, 129), dtype=np.float32), tf.TensorSpec(shape=(None, 129), dtype=np.float32)))
@@ -27,11 +30,12 @@ class Dataset():
         mixed_stfts = self.mixed_stfts
         ground_truth_masks = self.ground_truth_masks
         flat = self.flat
+        num_data = self.num_data
         stfts = os.listdir(mixed_stfts)
         masks = os.listdir(ground_truth_masks)
         if flat:
             i = 0
-            while i<len(stfts):
+            while i<min(len(stfts), num_data):
                 stft = stfts[i]
                 mask = masks[i]
                 
@@ -43,7 +47,7 @@ class Dataset():
                 i+=1
         else:
             i = 0
-            while i<len(stfts):
+            while i<min(len(stfts), num_data):
                 stft = stfts[i]
                 mask = masks[i]
                 
@@ -58,50 +62,53 @@ class Dataset():
 
 # input shape will be (batch_size, time_length, 129)
 class RNN(keras.models.Model):
-    def __init__(self):
-        super().__init__()
-        self._build_model()
+    def __init__(self, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh', loss='mse', optimizer='adam'):
+        self._build_model(LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh')
         super().__init__(self._x,self._y)
-        self.compile(loss='mse', optimizer='adam')
+        self.compile(loss=loss, optimizer=optimizer)
 
-    def _build_model(self):
+    def _build_model(self, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh'):
         x = layers.Input(shape=(None, 129))
-        h = layers.LSTM(128, return_sequences=True)(x)
-        h = layers.TimeDistributed(layers.Dense(128, activation='relu'))(h)
-        y = layers.TimeDistributed(layers.Dense(129, activation='tanh'))(h)
+        h = layers.LSTM(LSTM_unit, return_sequences=True)(x)
+        h = layers.TimeDistributed(layers.Dense(dense1_unit, activation=dense1_act))(h)
+        y = layers.TimeDistributed(layers.Dense(129, activation=dense2_act))(h)
 
         self._x = x
         self._y = y
 
+"""mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_masks, batch_size, val_batch_size, 
+shuffle, init, flat, clean_files, mixed_files, val_clean_files, val_mixed_files, """
 class Machine():
-    def __init__(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size=128, val_batch_size=32, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None):
-        self.set_data(mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size=batch_size, val_batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files, val_clean_files=val_clean_files, val_mixed_files=val_mixed_files)
-        self.set_model()
+    def __init__(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, num_data=15000, val_num_data=5000, batch_size=128, val_batch_size=32, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh', loss='mse', optimizer='adam', shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None):
+        self.set_data(mixed_stfts=mixed_stfts, ground_truth_masks=ground_truth_masks, val_mixed_stfts=val_mixed_stfts, val_ground_truth_masks=val_ground_truth_masks, num_data=num_data, val_num_data=val_num_data, batch_size=batch_size, val_batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files, val_clean_files=val_clean_files, val_mixed_files=val_mixed_files)
+        self.set_model(LSTM_unit=LSTM_unit, dense1_unit=dense1_unit, dense1_act=dense1_act, dense2_act=dense2_act, loss=loss, optimizer=optimizer)
         self.exp = 0
 
-    def set_data(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, batch_size, val_batch_size, shuffle, init, flat, clean_files, mixed_files, val_clean_files, val_mixed_files):
-        self.data = Dataset(mixed_stfts, ground_truth_masks, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
-        self.val_data = Dataset(val_mixed_stfts, val_ground_truth_masks, batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=val_clean_files, mixed_files=val_mixed_files)
+    def set_data(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, num_data, val_num_data, batch_size, val_batch_size, shuffle, init, flat, clean_files, mixed_files, val_clean_files, val_mixed_files):
+        self.data = Dataset(mixed_stfts, ground_truth_masks, num_data=num_data, batch_size=batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files)
+        self.val_data = Dataset(val_mixed_stfts, val_ground_truth_masks, num_data=val_num_data, batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=val_clean_files, mixed_files=val_mixed_files)
     
-    def set_model(self):
-        self.model = RNN()
+    def set_model(self, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh', loss='mse', optimizer='adam'):
+        self.model = RNN(LSTM_unit=LSTM_unit, dense1_unit=dense1_unit, dense1_act=dense1_act, dense2_act=dense2_act, loss=loss, optimizer=optimizer)
 
+    """checkpoint"""
     def load_model(self, checkpoint):
         self.model.load_weights(checkpoint)
         print("### Successfully loaded weights from {checkpoint} ###".format(checkpoint=checkpoint))
     
-    def load_latest(self):
+    def load_latest(self, save_filepath='./model/savedmodel/basic/ckpt'):
         exp = 0
-        latest = tf.train.latest_checkpoint('ckpt')
         try:
-            exp = int(latest[8:11]) + int(latest[12:14])
+            latest = tf.train.latest_checkpoint(save_filepath)
+            latest_bas = os.path.basename(latest)
+            exp = int(latest_bas[3:6]) + int(latest_bas[7:9])
+            self.load_model(latest)
         except:
-            exp = int(latest[8:11])
-        self.load_model(latest)
-        self.exp = exp
+            print("### No previous checkpoints found at {save_filepath}!!  ###".format(save_filepath=save_filepath))
+        self.exp = exp       
 
     class historyLogger(tf.keras.callbacks.Callback):
-        def __init__(self, filepath):
+        def __init__(self, filepath='./model/savedmodel/basic/history.csv'):
             super().__init__()
             self.filepath = filepath
 
@@ -109,17 +116,17 @@ class Machine():
             df = DataFrame(logs, index=[0])
             df.to_csv(self.filepath, header=False, index=False, mode='a')
 
-    def fit(self, epochs=10, verbose=1, save=True, hist_save=True):
+    def fit(self, epochs=10, verbose=1, save=True, save_filepath='./model/savedmodel/basic/ckpt', hist_save=True, hist_filepath='./model/savedmodel/basic'):
         data = self.data
         val_data = self.val_data
         model = self.model
         exp = self.exp
         callbacks=[]
         if save:
-            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='ckpt/cp_{exp:03d}+{{epoch:02d}}.cpkt'.format(exp=exp), monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
+            cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=save_filepath+'/cp_{exp:03d}+{{epoch:02d}}.ckpt'.format(exp=exp), monitor='loss', verbose=1, save_weights_only=True, save_best_only=False)
             callbacks.append(cp_callback)
         if hist_save:
-            hist_callback = self.historyLogger("history.csv")
+            hist_callback = self.historyLogger(hist_filepath+"/history.csv")
             callbacks.append(hist_callback)
         history = model.fit(data.dataset, epochs=epochs, verbose=verbose, callbacks=callbacks, validation_data=val_data.dataset)
         return history
@@ -158,17 +165,13 @@ class Machine():
         output_file.writeframes(array.array('h', est_data.astype(np.int16)).tobytes())
         output_file.close()
 
-    def run(self, epochs=10, verbose=1, save=True, hist_save=True, plot=True, from_ckpt=True):
+    def run(self, epochs=10, verbose=1, save=True, save_filepath='./model/savedmodel/basic/ckpt', hist_save=True, hist_filepath='./model/savedmodel/basic', plot=True, from_ckpt=True):
         if from_ckpt:
-            self.load_latest()
-        history = self.fit(epochs=epochs, verbose=verbose, save=save, hist_save=hist_save)
+            self.load_latest(save_filepath=save_filepath)
+        exp = self.exp
+        history = self.fit(epochs=epochs-exp, verbose=verbose, save=save, save_filepath=save_filepath, hist_save=hist_save, hist_filepath=hist_filepath)
         if plot:
             self.plot(history)
 
 if __name__=='__main__':
     mach = Machine(mixed_stfts='D:/RnE/data/mixed_stft/TRAIN', ground_truth_masks='D:/RnE/data/ground_truth_mask/TRAIN', val_mixed_stfts='D:/RnE/data/mixed_stft/TEST', val_ground_truth_masks='D:/RnE/data/ground_truth_mask/TEST', batch_size=128, val_batch_size=32, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None)
-    mach.load_latest()
-    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav')
-    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+NFIELD_ch05.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+NFIELD_ch05.wav--snr0.wav')
-    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav')
-    mach.estimate(input_path='D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+NPARK_ch01.wav--snr0.wav', output_path='D:/RnE/data/estimated/TEST/SI458.WAV.wav+DLIVING_ch01.wav--snr0.wav')

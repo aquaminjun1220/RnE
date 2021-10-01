@@ -1,5 +1,1 @@
-create_datasets/data/mixed_data/
-create_datasets/data/ground_truth_mask/
-create_datasets/data/mixed_stft/
-model/ckpt/
 .gitattribute
