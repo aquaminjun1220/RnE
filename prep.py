@@ -20,7 +20,7 @@ def get_args():
     return args
 
 def prep(clean_files, noise_files,  output_mixed_files, snrs, output_ground_truth_masks, output_mixed_stfts, num_data):
-    """create_mixed_audio_file(clean_files=clean_files, noise_files=noise_files, output_mixed_files=output_mixed_files, snrs=snrs)"""
+    create_mixed_audio_file(clean_files=clean_files, noise_files=noise_files, output_mixed_files=output_mixed_files, snrs=snrs)
     data_preprocess(clean_files=clean_files, mixed_files=output_mixed_files, output_ground_truth_masks=output_ground_truth_masks, output_mixed_stfts=output_mixed_stfts, num_data=num_data)
 
 if __name__=='__main__':

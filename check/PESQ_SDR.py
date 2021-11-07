@@ -1,6 +1,7 @@
 from pypesq import pesq
+from scipy.io import wavfile
+import numpy as np
 import wave
-
 
 def cal_amp(wf):
     buffer = wf.readframes(wf.getnframes())
@@ -8,12 +9,18 @@ def cal_amp(wf):
     amptitude = (np.frombuffer(buffer, dtype="int16")).astype(np.float64)
     return amptitude
 
-clean_file = ""
-noise_file = ""
+clean_file = "C:/Users/aquam/Documents/GitHub/RnE/data/clean_data/TIMIT/TEST/SA1.WAV.wav"
+est_file = "D:\RnE\data\estimated\TEST_stat/128_128_basic\SA1.WAV.wav+static_0_10.wav--snr10.0.wav"
 
 clean_wav = wave.open(clean_file, "r")
-noise_wav = wave.open(noise_file, "r")
+est_wav = wave.open(est_file, "r")
 clean = cal_amp(clean_wav)
-noise = cal_amp(noise_wav)
+est = cal_amp(est_wav)
+print("hello")
 
-print(pesq(16000, clean, noise, 'wb'))
+"""rate, clean = wavfile.read(clean_file)
+rate, est = wavfile.read(est_file)"""
+
+print("zz")
+print(pesq(clean, est, fs=16000, normalize=False))
+print("yabal")
