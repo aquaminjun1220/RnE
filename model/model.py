@@ -151,7 +151,7 @@ class Machine():
         input_stft_mag = np.abs(input_stft) # (129, timestep)
         input_stft_phase = np.angle(input_stft)
 
-        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(input_stft_mag), 0), training=None), axis=0)) # (129, timestep)
+        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(input_stft_mag), 0), training=None), axis=0)) #  input (1, timestep,129) into model, squeeze & transpose output to (129, timestep)
         cIRM_mag = 10 * np.arctanh(cIRM_mag_tanh)
         est_stft_mag = cIRM_mag * input_stft_mag
         est_stft_phase = input_stft_phase
