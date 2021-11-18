@@ -3,6 +3,35 @@ import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
 
+def specshow(spec, name="SPECTROGRAM"):
+    librosa.display.specshow(spec, sr=16000, hop_length=512, cmap='plasma')
+    plt.ylabel("Frequency")
+    plt.colorbar(format='%+2.0f dB')
+    plt.title(name)
+
+def spec3(clean_file_path, mixed_file_path, estimated_file_path, name="SSS"):
+    clean_data = librosa.load(clean_file_path, sr=16000, dtype="float64")[0]
+    clean_stft = librosa.stft(clean_data, n_fft=2048, hop_length=512, win_length=2048)
+    clean_spec_mag = librosa.amplitude_to_db(np.abs(clean_stft))
+
+    mixed_data = librosa.load(mixed_file_path, sr=16000, dtype="float64")[0]
+    mixed_stft = librosa.stft(mixed_data, n_fft=2048, hop_length=512, win_length=2048)
+    mixed_spec_mag = librosa.amplitude_to_db(np.abs(mixed_stft))
+
+    estimated_data = librosa.load(estimated_file_path, sr=16000, dtype="float64")[0]
+    estimated_stft = librosa.stft(estimated_data, n_fft=2048, hop_length=512, win_length=2048)
+    estimated_spec_mag = librosa.amplitude_to_db(np.abs(estimated_stft))
+
+    plt.figure(figsize=(9,6))
+    plt.rc('font', size=12)
+    plt.subplot(311)
+    specshow(clean_spec_mag, name=name+"_clean")
+    plt.subplot(312)
+    specshow(mixed_spec_mag, name=name+"_mixed")
+    plt.subplot(313)
+    specshow(estimated_spec_mag, name=name+"_estimated")
+    plt.show()
+"""
 clean_path = "C:/Users/aquam/Documents/GitHub/RnE/data/clean_data/TIMIT/TEST/SI458.WAV.wav"
 mixed_path = "D:/RnE/data/mixed_data/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav"
 estimated_path = "D:/RnE/data/estimated/TEST/SI458.WAV.wav+DKITCHEN_ch01.wav--snr0.wav"
@@ -76,4 +105,4 @@ plt.ylabel("Frequency")
 plt.colorbar(format='%+2.0f dB')
 plt.title("Estimated / Nonstationary")
 
-plt.show()
+plt.show()"""

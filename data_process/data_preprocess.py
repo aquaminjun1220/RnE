@@ -33,17 +33,21 @@ def save_as_csv(data, path):
     data.to_csv(path, header=False, index=False)
 
 def data_preprocess(clean_files, mixed_files, output_ground_truth_masks, output_mixed_stfts, num_data):
-    for index, mixed_file in enumerate(os.listdir(mixed_files)[:num_data]):
+    mixed_ind = 0
+    while (num_data==-1 and mixed_ind<=len(os.listdir(mixed_files))-1) or mixed_ind<=num_data-1:
+        mixed_file = os.listdir(mixed_files)[mixed_ind]
         clean_file = mixed_file.split('+')[0]
 
-        clean_stft = cal_stft(clean_files + '/' + clean_file)
-        mixed_stft = cal_stft(mixed_files + '/' + mixed_file)
+        clean_stft = cal_stft(clean_files + clean_file)
+        mixed_stft = cal_stft(mixed_files + mixed_file)
         
-        save_as_csv(data=np.abs(mixed_stft), path=(output_mixed_stfts + '/' + mixed_file + '-' + 'stft.csv'))
+        save_as_csv(data=np.abs(mixed_stft), path=(output_mixed_stfts + mixed_file + '-' + 'stft.csv'))
 
         cIRM = cal_cIRM(clean_stft, mixed_stft)
-        save_as_csv(data=np.abs(cIRM), path=(output_ground_truth_masks + '/' + mixed_file + '-' + 'ground_mask_mag.csv'))
-        print(index)
+        save_as_csv(data=np.abs(cIRM), path=(output_ground_truth_masks + mixed_file + '-' + 'ground_mask_mag.csv'))
+        mixed_ind += 1
+        if mixed_ind%100==0:
+            print("d:", mixed_ind)
 
 if __name__=='__main__':
 

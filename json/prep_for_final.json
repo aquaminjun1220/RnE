@@ -1,0 +1,74 @@
+[
+    {
+        "clean_files" : "./data/clean_data/TIMIT/TRAIN/",
+        "noise_files" : "data/noise_data/DEMAND/DEMAND_each2/",
+        "output_mixed_files" : "D:/RnE/data/mixed_data/for_final/TRAIN/",
+        "snrs" : [
+            -15,
+            -10,
+            -5,
+            0,
+            5,
+            10,
+            15
+        ],
+        "output_ground_truth_masks" : "D:/RnE/data/ground_truth_mask/for_final/TRAIN/",
+        "output_mixed_stfts" : "D:/RnE/data/mixed_stft/for_final/TRAIN/",
+        "num_clean" : 100,
+        "num_noise" : -1
+    },
+    {
+        "clean_files" : "./data/clean_data/TIMIT/TRAIN/",
+        "noise_files" : "data/noise_data/stat_noise/",
+        "output_mixed_files" : "D:/RnE/data/mixed_data/for_final/TRAIN_stat/",
+        "snrs" : [
+            -15,
+            -10,
+            -5,
+            0,
+            5,
+            10,
+            15
+        ],
+        "output_ground_truth_masks" : "D:/RnE/data/ground_truth_mask/for_final/TRAIN_stat/",
+        "output_mixed_stfts" : "D:/RnE/data/mixed_stft/for_final/TRAIN_stat/",
+        "num_clean" : 100,
+        "num_noise" : -1
+    },
+    {
+        "clean_files" : "./data/clean_data/TIMIT/TEST/",
+        "noise_files" : "data/noise_data/DEMAND/DEMAND_each2/",
+        "output_mixed_files" : "D:/RnE/data/mixed_data/for_final/TEST/",
+        "snrs" : [
+            -15,
+            -10,
+            -5,
+            0,
+            5,
+            10,
+            15
+        ],
+        "output_ground_truth_masks" : "D:/RnE/data/ground_truth_mask/for_final/TEST/",
+        "output_mixed_stfts" : "D:/RnE/data/mixed_stft/for_final/TEST/",
+        "num_clean" : 100,
+        "num_noise" : -1
+    },
+    {
+        "clean_files" : "./data/clean_data/TIMIT/TEST/",
+        "noise_files" : "data/noise_data/stat_noise/",
+        "output_mixed_files" : "D:/RnE/data/mixed_data/for_final/TEST_stat/",
+        "snrs" : [
+            -15,
+            -10,
+            -5,
+            0,
+            5,
+            10,
+            15
+        ],
+        "output_ground_truth_masks" : "D:/RnE/data/ground_truth_mask/for_final/TEST_stat/",
+        "output_mixed_stfts" : "D:/RnE/data/mixed_stft/for_final/TEST_stat/",
+        "num_clean" : 100,
+        "num_noise" : -1
+    }
+]

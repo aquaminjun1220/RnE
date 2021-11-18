@@ -79,8 +79,7 @@ class RNN(keras.models.Model):
 """mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_masks, batch_size, val_batch_size, 
 shuffle, init, flat, clean_files, mixed_files, val_clean_files, val_mixed_files, """
 class Machine():
-    def __init__(self, mixed_stfts, ground_truth_masks, val_mixed_stfts, val_ground_truth_masks, num_data=15000, val_num_data=5000, batch_size=128, val_batch_size=32, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh', loss='mse', optimizer='adam', shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None):
-        self.set_data(mixed_stfts=mixed_stfts, ground_truth_masks=ground_truth_masks, val_mixed_stfts=val_mixed_stfts, val_ground_truth_masks=val_ground_truth_masks, num_data=num_data, val_num_data=val_num_data, batch_size=batch_size, val_batch_size=val_batch_size, shuffle=shuffle, init=init, flat=flat, clean_files=clean_files, mixed_files=mixed_files, val_clean_files=val_clean_files, val_mixed_files=val_mixed_files)
+    def __init__(self, LSTM_unit=128, dense1_unit=128, dense1_act='relu', dense2_act='tanh', loss='mse', optimizer='adam'):
         self.set_model(LSTM_unit=LSTM_unit, dense1_unit=dense1_unit, dense1_act=dense1_act, dense2_act=dense2_act, loss=loss, optimizer=optimizer)
         self.exp = 0
 
@@ -144,26 +143,37 @@ class Machine():
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
 
-    def estimate(self, input_path, output_path):
-        input_data = librosa.load(input_path, sr=16000, dtype='float64')[0]
-        input_stft = librosa.stft(input_data, n_fft=256, hop_length=128, win_length=256)
+    def estimate(self, mixed_data):
+        mixed_stft = librosa.stft(mixed_data, n_fft=256, hop_length=128, win_length=256)
         
-        input_stft_mag = np.abs(input_stft) # (129, timestep)
-        input_stft_phase = np.angle(input_stft)
+        mixed_stft_mag = np.abs(mixed_stft) # (129, timestep)
+        mixed_stft_phase = np.angle(mixed_stft)
 
-        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(input_stft_mag), 0), training=None), axis=0)) #  input (1, timestep,129) into model, squeeze & transpose output to (129, timestep)
+        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(mixed_stft_mag), 0), training=None), axis=0)) #  input (1, timestep,129) into model, squeeze & transpose output to (129, timestep)
         cIRM_mag = 10 * np.arctanh(cIRM_mag_tanh)
-        est_stft_mag = cIRM_mag * input_stft_mag
-        est_stft_phase = input_stft_phase
+        est_stft_mag = cIRM_mag * mixed_stft_mag
+        est_stft_phase = mixed_stft_phase
         est_stft = est_stft_mag * np.exp(1j*est_stft_phase)
         
         est_data = librosa.istft(est_stft, hop_length=128, win_length=256)
-        est_data = est_data*2**15 # for transition between librosa and wave
+        return est_data
 
-        output_file = wave.Wave_write(output_path)
-        output_file.setparams(wave.open(input_path, "r").getparams()) #nchannels, sampwidth, framerate, nframes, comptype, compname
-        output_file.writeframes(array.array('h', est_data.astype(np.int16)).tobytes())
-        output_file.close()
+    def estimate_with_phase(self, mixed_data, clean_data):
+        mixed_stft = librosa.stft(mixed_data, n_fft=256, hop_length=128, win_length=256)
+        clean_stft = librosa.stft(clean_data, n_fft=256, hop_length=128, win_length=256)
+        
+        mixed_stft_mag = np.abs(mixed_stft) # (129, timestep)
+        mixed_stft_phase = np.angle(clean_stft) # use clean stft phase
+
+        cIRM_mag_tanh = np.transpose(np.squeeze(self.model(np.expand_dims(np.transpose(mixed_stft_mag), 0), training=None), axis=0)) #  mixed (1, timestep,129) into model, squeeze & transpose output to (129, timestep)
+        cIRM_mag = 10 * np.arctanh(cIRM_mag_tanh)
+        est_stft_mag = cIRM_mag * mixed_stft_mag
+        est_stft_phase = mixed_stft_phase
+        est_stft = est_stft_mag * np.exp(1j*est_stft_phase)
+        
+        est_data = librosa.istft(est_stft, hop_length=128, win_length=256)
+        return est_data
+
 
     def run(self, epochs=10, verbose=1, save=True, save_filepath='./model/savedmodel/basic/ckpt', hist_save=True, hist_filepath='./model/savedmodel/basic', plot=True, from_ckpt=True):
         if from_ckpt:
@@ -174,4 +184,4 @@ class Machine():
             self.plot(history)
 
 if __name__=='__main__':
-    mach = Machine(mixed_stfts='D:/RnE/data/mixed_stft/TRAIN', ground_truth_masks='D:/RnE/data/ground_truth_mask/TRAIN', val_mixed_stfts='D:/RnE/data/mixed_stft/TEST', val_ground_truth_masks='D:/RnE/data/ground_truth_mask/TEST', batch_size=128, val_batch_size=32, shuffle=False, init=False, flat=False, clean_files=None, mixed_files=None, val_clean_files=None, val_mixed_files=None)
+    pass

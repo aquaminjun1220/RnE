@@ -1,0 +1,54 @@
+[
+	{
+		"clean_file_paths" : "./data/clean_data/TIMIT/TRAIN/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TRAIN/",
+		"noise_type" : "nonstationary",
+		"errors" : [
+			1,
+			0.5,
+			0.25,
+			0.1,
+			0.01,
+			0
+		]
+	},
+	{
+		"clean_file_paths" : "./data/clean_data/TIMIT/TRAIN/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TRAIN_stat/",
+		"noise_type" : "stationary",
+		"errors" : [
+			1,
+			0.5,
+			0.25,
+			0.1,
+			0.01,
+			0
+		]
+	},
+	{
+		"clean_file_paths" : "./data/clean_data/TIMIT/TEST/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TEST/",
+		"noise_type" : "nonstationary",
+		"errors" : [
+			1,
+			0.5,
+			0.25,
+			0.1,
+			0.01,
+			0
+		]
+	},
+	{
+		"clean_file_paths" : "./data/clean_data/TIMIT/TEST/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TEST_stat/",
+		"noise_type" : "stationary",
+		"errors" : [
+			1,
+			0.5,
+			0.25,
+			0.1,
+			0.01,
+			0
+		]
+	}
+]

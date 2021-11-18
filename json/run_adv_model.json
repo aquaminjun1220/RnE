@@ -1,0 +1,12 @@
+[
+    {
+		"clean_file_paths" : "./data/clean_data/TIMIT/TEST/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TEST/",
+		"noise_type" : "nonstationary"
+	},
+    {
+		"clean_file_paths" : "./data/clean_data/TIMIT/TEST/",
+		"mixed_file_paths" : "D:/RnE/data/mixed_data/for_final/TEST_stat/",
+		"noise_type" : "stationary"
+	}
+]
